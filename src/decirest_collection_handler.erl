@@ -93,10 +93,10 @@ handle_body(Body, Req = #{path := Path}, State = #{module := Module}) ->
           ReqNew = cowboy_req:set_resp_body(<<"error">>, Req),
           {stop, ReqNew, NewState};
         {StatusCode, NewState} when is_number(StatusCode) ->
-          ReqNew = cowboy_req:reply(StatusCode, Req),
+          ReqNew = decirest_req:reply(StatusCode, Req),
           {stop, ReqNew, NewState};
         {StatusCode, RespBody, NewState} when is_number(StatusCode) ->
-          ReqNew = cowboy_req:reply(StatusCode, #{}, RespBody, Req),
+          ReqNew = decirest_req:reply(StatusCode, #{}, RespBody, Req),
           {stop, ReqNew, NewState}
       end;
     {error, Errors} ->
@@ -146,8 +146,11 @@ to_json_default(Req, State) ->
   Data0 = fetch_data(Req, State),
   Data = filter_data_on_pk(Data0, Req, State),
   Data1 = maybe_sort(Req, Data),
+  Data2 = decirest_handler_lib:prepare_output(Data1, State),
+  Data3 = decirest_handler_lib:validate_output(collection, Data2, State),
+
   PrettyConfig = decirest_handler_lib:maybe_pretty(Req, State),
-  {jiffy:encode(Data1, [force_utf8] ++ PrettyConfig), Req, State}.
+  {jiffy:encode(Data3, [force_utf8] ++ PrettyConfig), Req, State}.
 
 maybe_sort(Req, Data) ->
   case cowboy_req:binding(sort_by, Req, undefined) of
